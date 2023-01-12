@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-@Target( {ElementType.FIELD})
+@Target({ElementType.FIELD})
 @Retention(RUNTIME)
 @Constraint(validatedBy = NullOrNotBlankValidator.class)
 @Documented
