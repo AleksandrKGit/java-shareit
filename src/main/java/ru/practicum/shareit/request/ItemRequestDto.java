@@ -1,21 +1,19 @@
 package ru.practicum.shareit.request;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
-import ru.practicum.shareit.user.User;
-
+import ru.practicum.shareit.validation.constraints.NullOrNotBlank;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ItemRequest {
+@ToString
+public class ItemRequestDto {
     Integer id;
+    @NullOrNotBlank(message = "{request.ItemRequestDto.notBlankDescription}")
     String description;
-    User requestor;
+    Integer requestor;
     LocalDateTime created;
 }
