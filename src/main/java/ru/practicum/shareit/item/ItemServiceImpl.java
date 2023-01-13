@@ -4,8 +4,11 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.AccessDeniedException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -31,14 +34,32 @@ public class ItemServiceImpl implements ItemService {
         if (itemDto.getOwner() == null) {
             throw new ValidationException("owner", messageSource.get("item.ItemService.notNullOwner"));
         }
+        if (itemDto.getName() == null) {
+            throw new ValidationException("name", messageSource.get("item.ItemService.notNullName"));
+        }
+        if (itemDto.getDescription() == null) {
+            throw new ValidationException("description", messageSource.get("item.ItemService.notNullDescription"));
+        }
+        if (itemDto.getAvailable() == null) {
+            throw new ValidationException("description", messageSource.get("item.ItemService.notNullAvailable"));
+        }
+        User owner = userRepository.readById(itemDto.getOwner());
+        if (owner == null) {
+            throw new NotFoundException("id", messageSource.get("item.ItemService.notFoundOwnerById") + ": "
+                    + itemDto.getOwner());
+        }
         Item item = ItemMapper.toItem(itemDto);
-        item.setOwner(userRepository.readById(itemDto.getOwner()));
+        item.setOwner(owner);
         return ItemMapper.toItemDto(itemRepository.create(item));
     }
 
     @Override
     public ItemDto readById(Integer id) {
-        return ItemMapper.toItemDto(itemRepository.readById(id));
+        Item item = itemRepository.readById(id);
+        if (item == null) {
+            throw new NotFoundException("id", messageSource.get("item.ItemService.notFoundById") + ": " + id);
+        }
+        return ItemMapper.toItemDto(item);
     }
 
     @Override
@@ -55,6 +76,16 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDto update(ItemDto itemDto) {
-        return ItemMapper.toItemDto(itemRepository.updateByOwner(itemDto.getOwner(), ItemMapper.toItem(itemDto)));
+        if (itemDto.getOwner() == null) {
+            throw new ValidationException("owner", messageSource.get("item.ItemService.notNullOwner"));
+        }
+        if (itemDto.getId() == null) {
+            throw new ValidationException("id", messageSource.get("item.ItemService.notNullId"));
+        }
+        Item item = itemRepository.updateByOwner(itemDto.getOwner(), ItemMapper.toItem(itemDto));
+        if (item == null) {
+            throw new AccessDeniedException("user" + itemDto.getOwner(), "item" + itemDto.getId().toString());
+        }
+        return ItemMapper.toItemDto(item);
     }
 }

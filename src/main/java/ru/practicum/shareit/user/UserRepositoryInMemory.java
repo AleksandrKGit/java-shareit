@@ -5,8 +5,6 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import ru.practicum.shareit.exception.AlreadyExistException;
-import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,20 +37,8 @@ public class UserRepositoryInMemory implements UserRepository {
         }
     }
 
-    void checkId(Integer id) {
-        if (!users.containsKey(id)) {
-            throw new NotFoundException("id", messageSource.get("user.UserRepository.notFoundById") + ": " + id);
-        }
-    }
-
     @Override
     public User create(User user) {
-        if (user.getName() == null) {
-            throw new ValidationException("name", messageSource.get("user.UserRepository.notNullName"));
-        }
-        if (user.getEmail() == null) {
-            throw new ValidationException("name", messageSource.get("user.UserRepository.notNullEmail"));
-        }
         checkUniqueEmail(user);
         user.setId(getId());
         users.put(user.getId(), user);
@@ -68,14 +54,15 @@ public class UserRepositoryInMemory implements UserRepository {
 
     @Override
     public User readById(Integer id) {
-        checkId(id);
         return users.get(id);
     }
 
     @Override
     public User update(User user) {
-        checkId(user.getId());
         User updatedUser = users.get(user.getId());
+        if (updatedUser == null) {
+            return null;
+        }
         if (user.getEmail() != null) {
             checkUniqueEmail(user);
             updatedUser.setEmail(user.getEmail());
@@ -87,8 +74,7 @@ public class UserRepositoryInMemory implements UserRepository {
     }
 
     @Override
-    public void delete(Integer id) {
-        checkId(id);
-        users.remove(id);
+    public boolean delete(Integer id) {
+        return users.remove(id) != null;
     }
 }

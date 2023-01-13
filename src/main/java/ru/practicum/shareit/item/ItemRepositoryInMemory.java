@@ -4,10 +4,6 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-import ru.practicum.shareit.exception.AccessDeniedException;
-import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
-import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,32 +18,14 @@ public class ItemRepositoryInMemory implements ItemRepository {
 
     final Map<Integer, Item> items;
 
-    final DefaultLocaleMessageSource messageSource;
-
     @Autowired
-    public ItemRepositoryInMemory(DefaultLocaleMessageSource messageSource) {
-        this.messageSource = messageSource;
+    public ItemRepositoryInMemory() {
         id = 1;
         items = new HashMap<>();
     }
 
-    void checkId(Integer id) {
-        if (!items.containsKey(id)) {
-            throw new NotFoundException("id", messageSource.get("item.ItemRepository.notFoundById") + ": " + id);
-        }
-    }
-
     @Override
     public Item create(Item item) {
-        if (item.getName() == null) {
-            throw new ValidationException("name", messageSource.get("item.ItemRepository.notNullName"));
-        }
-        if (item.getDescription() == null) {
-            throw new ValidationException("description", messageSource.get("item.ItemRepository.notNullDescription"));
-        }
-        if (item.getAvailable() == null) {
-            throw new ValidationException("description", messageSource.get("item.ItemRepository.notNullAvailable"));
-        }
         item.setId(getId());
         items.put(item.getId(), item);
         return item;
@@ -55,7 +33,6 @@ public class ItemRepositoryInMemory implements ItemRepository {
 
     @Override
     public Item readById(Integer id) {
-        checkId(id);
         return items.get(id);
     }
 
@@ -77,10 +54,12 @@ public class ItemRepositoryInMemory implements ItemRepository {
 
     @Override
     public Item updateByOwner(Integer ownerId, Item item) {
-        checkId(item.getId());
         Item updatedItem = items.get(item.getId());
+        if (updatedItem == null) {
+            return null;
+        }
         if (!updatedItem.getOwner().getId().equals(ownerId)) {
-            throw new AccessDeniedException("user" + ownerId.toString(), "item" + item.getId().toString());
+            return null;
         }
         if (item.getName() != null) {
             updatedItem.setName(item.getName());
