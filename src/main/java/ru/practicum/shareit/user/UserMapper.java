@@ -2,7 +2,7 @@ package ru.practicum.shareit.user;
 
 public class UserMapper {
     public static UserDto toUserDto(User user) {
-        return new UserDto(
+        return user == null ? null : new UserDto(
                 user.getId(),
                 user.getName(),
                 user.getEmail()
@@ -10,7 +10,7 @@ public class UserMapper {
     }
 
     public static User toUser(UserDto userDto) {
-        return new User(
+        return userDto == null ? null : new User(
                 userDto.getId(),
                 userDto.getName(),
                 userDto.getEmail()

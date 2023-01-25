@@ -1,7 +1,6 @@
 package ru.practicum.shareit.validation.constraints;
 
 import ru.practicum.shareit.validation.validators.NullOrNotBlankValidator;
-
 import javax.validation.Constraint;
 import javax.validation.Payload;
 import java.lang.annotation.Documented;
@@ -17,7 +16,9 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Documented
 public @interface NullOrNotBlank {
     String message() default "{javax.validation.constraints.NullOrNotBlank.message}";
+
     Class<?>[] groups() default { };
+
     Class<? extends Payload>[] payload() default {};
 }
 

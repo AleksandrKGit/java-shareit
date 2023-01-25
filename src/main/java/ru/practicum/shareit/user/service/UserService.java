@@ -1,6 +1,7 @@
-package ru.practicum.shareit.user;
+package ru.practicum.shareit.user.service;
 
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.user.UserDto;
 import java.util.Set;
 
 @Service
@@ -9,9 +10,9 @@ public interface UserService {
 
     Set<UserDto> readAll();
 
-    UserDto readById(Integer id);
+    UserDto readById(Long id);
 
     UserDto update(UserDto userDto);
 
-    void delete(Integer id);
+    void delete(Long id);
 }

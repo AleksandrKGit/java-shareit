@@ -1,32 +1,39 @@
-package ru.practicum.shareit.request;
+package ru.practicum.shareit.item.model;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import ru.practicum.shareit.request.ItemRequest;
 import ru.practicum.shareit.user.User;
 import javax.persistence.*;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "requests")
+@Table(name = "items")
 @Getter
 @Setter
 @ToString
-@FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
 @NoArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder(toBuilder = true)
-public class ItemRequest {
+public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
     @Column(nullable = false)
+    String name;
+
+    @Column(length = 2000)
     String description;
+
+    @Column(name = "is_available")
+    Boolean available;
 
     @ManyToOne
     @JoinColumn(nullable = false, updatable = false)
-    User requestor;
+    User owner;
 
-    @Column(updatable = false, insertable = false)
-    LocalDateTime created;
+    @ManyToOne
+    @JoinColumn(updatable = false)
+    ItemRequest request;
 }

@@ -1,21 +1,23 @@
 package ru.practicum.shareit.request;
 
+import ru.practicum.shareit.user.User;
+
 public class ItemRequestMapper {
     public static ItemRequestDto toItemRequestDto(ItemRequest itemRequest) {
-        return new ItemRequestDto(
+        return itemRequest == null ? null : new ItemRequestDto(
                 itemRequest.getId(),
                 itemRequest.getDescription(),
-                itemRequest.getRequestor() != null ? itemRequest.getRequestor().getId() : null,
+                itemRequest.getRequestor().getId(),
                 itemRequest.getCreated()
         );
     }
 
     public static ItemRequest toItemRequest(ItemRequestDto itemRequestDto) {
-        return new ItemRequest(
+        return itemRequestDto == null ? null : new ItemRequest(
                 itemRequestDto.getId(),
                 itemRequestDto.getDescription(),
-                null,
-                itemRequestDto.getCreated()
+                User.builder().id(itemRequestDto.getRequestorId()).build(),
+                null
         );
     }
 }
