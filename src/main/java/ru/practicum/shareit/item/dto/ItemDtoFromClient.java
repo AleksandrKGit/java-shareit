@@ -11,8 +11,8 @@ import javax.validation.constraints.Size;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ItemDtoFromClient {
-    private final static int MAX_NAME_SIZE = 255;
-    private final static int MAX_DESCRIPTION_SIZE = 2000;
+    static final int MAX_NAME_SIZE = 255;
+    static final int MAX_DESCRIPTION_SIZE = 2000;
 
     Long id;
 

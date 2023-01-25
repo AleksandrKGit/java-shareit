@@ -33,9 +33,9 @@ public class BookingController {
             throw new ValidationException("booking", messageSource.get("booking.BookingService.notNullBooking"));
         }
         bookingDtoFromClient.setBookerId(userId);
-        BookingDtoToClient BookingDtoToClient = bookingService.create(bookingDtoFromClient);
-        log.info("{}: {}", messageSource.get("booking.BookingController.create"), BookingDtoToClient);
-        return ResponseEntity.ok(BookingDtoToClient);
+        BookingDtoToClient bookingDtoToClient = bookingService.create(bookingDtoFromClient);
+        log.info("{}: {}", messageSource.get("booking.BookingController.create"), bookingDtoToClient);
+        return ResponseEntity.ok(bookingDtoToClient);
     }
 
     @PatchMapping("/{id}")

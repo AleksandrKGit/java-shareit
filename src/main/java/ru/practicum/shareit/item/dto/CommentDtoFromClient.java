@@ -11,7 +11,7 @@ import javax.validation.constraints.Size;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentDtoFromClient {
-    private final static int MAX_TEXT_SIZE = 2000;
+    static final int MAX_TEXT_SIZE = 2000;
 
     Long id;
 

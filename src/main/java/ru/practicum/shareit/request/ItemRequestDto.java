@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @ToString
 public class ItemRequestDto {
-    private final static int MAX_DESCRIPTION_SIZE = 255;
+    static final int MAX_DESCRIPTION_SIZE = 255;
 
     Long id;
 

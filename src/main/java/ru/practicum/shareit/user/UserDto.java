@@ -12,9 +12,9 @@ import javax.validation.constraints.Size;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserDto {
-    private final static int MAX_NAME_SIZE = 255;
+    static final int MAX_NAME_SIZE = 255;
 
-    private final static int MAX_EMAIL_SIZE = 255;
+    static final int MAX_EMAIL_SIZE = 255;
 
     Long id;
 
