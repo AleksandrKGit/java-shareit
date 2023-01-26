@@ -5,12 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import ru.practicum.shareit.user.service.UserService;
-
-import javax.validation.Valid;
+import ru.practicum.shareit.validation.groups.OnCreate;
+import ru.practicum.shareit.validation.groups.OnUpdate;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,7 +25,7 @@ public class UserController {
     UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserDto> create(@Valid @RequestBody UserDto userDto) {
+    public ResponseEntity<UserDto> create(@Validated(OnCreate.class) @RequestBody UserDto userDto) {
         userDto = userService.create(userDto);
         log.info("{}: {}", messageSource.get("user.UserController.create"), userDto);
         return ResponseEntity.ok(userDto);
@@ -48,12 +48,8 @@ public class UserController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<UserDto> update(@PathVariable Long id,
-                                          @Valid @RequestBody UserDto userDto) {
-        if (userDto == null) {
-            throw new ValidationException("user", messageSource.get("user.UserService.notNullUser"));
-        }
-        userDto.setId(id);
-        userDto = userService.update(userDto);
+                                          @Validated(OnUpdate.class) @RequestBody UserDto userDto) {
+        userDto = userService.update(id, userDto);
         log.info("{}: {}", messageSource.get("user.UserController.update"), userDto);
         return ResponseEntity.ok(userDto);
     }

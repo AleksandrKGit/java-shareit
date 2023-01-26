@@ -5,14 +5,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.dto.CommentDtoFromClient;
 import ru.practicum.shareit.item.dto.CommentDtoToClient;
 import ru.practicum.shareit.item.dto.ItemDtoFromClient;
 import ru.practicum.shareit.item.dto.ItemDtoToClient;
 import ru.practicum.shareit.item.service.ItemService;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
+import ru.practicum.shareit.validation.groups.OnCreate;
+import ru.practicum.shareit.validation.groups.OnUpdate;
+
 import javax.validation.Valid;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,12 +32,9 @@ public class ItemController {
 
     @PostMapping
     public ResponseEntity<ItemDtoToClient> create(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                                  @Valid @RequestBody ItemDtoFromClient itemDtoFromClient) {
-        if (itemDtoFromClient == null) {
-            throw new ValidationException("item", messageSource.get("item.ItemService.notNullItem"));
-        }
-        itemDtoFromClient.setOwnerId(userId);
-        ItemDtoToClient itemDtoToClient = itemService.create(itemDtoFromClient);
+                                                  @Validated(OnCreate.class) @RequestBody ItemDtoFromClient
+                                                          itemDtoFromClient) {
+        ItemDtoToClient itemDtoToClient = itemService.create(userId, itemDtoFromClient);
         log.info("{}: {}", messageSource.get("item.ItemController.create"), itemDtoToClient);
         return ResponseEntity.ok(itemDtoToClient);
     }
@@ -42,13 +42,9 @@ public class ItemController {
     @PatchMapping("/{id}")
     public ResponseEntity<ItemDtoToClient> update(@RequestHeader("X-Sharer-User-Id") Long userId,
                                                   @PathVariable Long id,
-                                                  @Valid @RequestBody ItemDtoFromClient itemDtoFromClient) {
-        if (itemDtoFromClient == null) {
-            throw new ValidationException("item", messageSource.get("item.ItemService.notNullItem"));
-        }
-        itemDtoFromClient.setId(id);
-        itemDtoFromClient.setOwnerId(userId);
-        ItemDtoToClient itemDtoToClient = itemService.update(itemDtoFromClient);
+                                                  @Validated(OnUpdate.class) @RequestBody ItemDtoFromClient
+                                                              itemDtoFromClient) {
+        ItemDtoToClient itemDtoToClient = itemService.update(userId, id, itemDtoFromClient);
         log.info("{}: {}", messageSource.get("item.ItemController.update"), itemDtoToClient);
         return ResponseEntity.ok(itemDtoToClient);
     }
@@ -83,12 +79,7 @@ public class ItemController {
     public ResponseEntity<CommentDtoToClient> createComment(@RequestHeader("X-Sharer-User-Id") Long userId,
                                                             @PathVariable Long itemId, @Valid @RequestBody
                                                                 CommentDtoFromClient commentDtoFromClient) {
-        if (commentDtoFromClient == null) {
-            throw new ValidationException("comment", messageSource.get("item.ItemService.notNullComment"));
-        }
-        commentDtoFromClient.setAuthorId(userId);
-        commentDtoFromClient.setItemId(itemId);
-        CommentDtoToClient commentDtoToClient = itemService.createComment(commentDtoFromClient);
+        CommentDtoToClient commentDtoToClient = itemService.createComment(userId, itemId, commentDtoFromClient);
         log.info("{}: {}", messageSource.get("item.ItemController.createComment"), commentDtoToClient);
         return ResponseEntity.ok(commentDtoToClient);
     }

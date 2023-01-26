@@ -42,53 +42,39 @@ public class ItemServiceImpl implements ItemService {
     CommentRepository commentRepository;
 
     private ItemDtoToClient mapToItemDto(Item item, boolean showBooking, boolean showComments) {
-        ItemDtoToClient itemDto = ItemMapper.toItemDto(item);
+        ItemDtoToClient itemDto = ItemMapper.INSTANCE.toDto(item);
         if (showBooking) {
             LocalDateTime now = LocalDateTime.now();
             Optional<Booking> last =
                     bookingRepository.findFirst1ByItem_IdAndEndLessThanOrderByEndDesc(item.getId(), now);
             Optional<Booking> next =
                     bookingRepository.findFirst1ByItem_IdAndStartGreaterThanOrderByStartAsc(item.getId(), now);
-            itemDto.setLastBooking(ItemMapper.toBookingDto(last.orElse(null)));
-            itemDto.setNextBooking(ItemMapper.toBookingDto(next.orElse(null)));
+            itemDto.setLastBooking(ItemMapper.INSTANCE.toBookingDto(last.orElse(null)));
+            itemDto.setNextBooking(ItemMapper.INSTANCE.toBookingDto(next.orElse(null)));
         }
         if (showComments) {
             itemDto.setComments(commentRepository.findByItem_IdOrderByCreatedDesc(item.getId()).stream()
-                    .map(CommentMapper::toCommentDto).collect(Collectors.toSet()));
+                    .map(CommentMapper.INSTANCE::toDto).collect(Collectors.toSet()));
         }
         return itemDto;
     }
 
     @Override
-    public ItemDtoToClient create(ItemDtoFromClient itemDtoFromClient) {
-        if (itemDtoFromClient == null) {
-            throw new ValidationException("item", messageSource.get("item.ItemService.notNullItem"));
-        }
-        if (itemDtoFromClient.getOwnerId() == null) {
-            throw new ValidationException("ownerId", messageSource.get("item.ItemService.notNullOwnerId"));
-        }
-        if (itemDtoFromClient.getName() == null) {
-            throw new ValidationException("name", messageSource.get("item.ItemService.notNullName"));
-        }
-        if (itemDtoFromClient.getDescription() == null) {
-            throw new ValidationException("description", messageSource.get("item.ItemService.notNullDescription"));
-        }
-        if (itemDtoFromClient.getAvailable() == null) {
-            throw new ValidationException("available", messageSource.get("item.ItemService.notNullAvailable"));
-        }
-
+    public ItemDtoToClient create(Long ownerId, ItemDtoFromClient itemDtoFromClient) {
         /*
          * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
          * Здесь идёт дополнительный запрос к базе данных ввиду того, что при ошибке операции INSERT, которая возникает
          * из-за несуществующего owner_id, PostgreSQL инкрементирует значение id, а тесты Postman это не учитывают.
          */
-        if (!userRepository.existsById(itemDtoFromClient.getOwnerId())) {
+        if (!userRepository.existsById(ownerId)) {
             throw new NotFoundException("ownerId", messageSource.get("item.ItemService.notFoundOwnerById") + ": "
-                    + itemDtoFromClient.getOwnerId());
+                    + ownerId);
         }
 
+        itemDtoFromClient.setOwnerId(ownerId);
+
         try {
-            return mapToItemDto(itemRepository.save(ItemMapper.toItem(itemDtoFromClient)),
+            return mapToItemDto(itemRepository.save(ItemMapper.INSTANCE.toModel(itemDtoFromClient)),
                     false, false);
         } catch (DataIntegrityViolationException exception) {
             // Обработка несуществующего owner_id без дополнительного запроса к БД
@@ -128,25 +114,13 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDtoToClient update(ItemDtoFromClient itemDtoFromClient) {
-        if (itemDtoFromClient == null) {
-            throw new ValidationException("item", messageSource.get("item.ItemService.notNullItem"));
-        }
-        if (itemDtoFromClient.getOwnerId() == null) {
-            throw new ValidationException("owner", messageSource.get("item.ItemService.notNullOwnerId"));
-        }
-        if (itemDtoFromClient.getId() == null) {
-            throw new ValidationException("id", messageSource.get("item.ItemService.notNullId"));
-        }
-
-        Optional<Item> item = itemRepository.findById(itemDtoFromClient.getId());
+    public ItemDtoToClient update(Long ownerId, Long id, ItemDtoFromClient itemDtoFromClient) {
+        Optional<Item> item = itemRepository.findById(id);
         if (item.isEmpty()) {
-            throw new NotFoundException("id", messageSource.get("item.ItemService.notFoundById") + ": "
-                    + itemDtoFromClient.getId());
+            throw new NotFoundException("id", messageSource.get("item.ItemService.notFoundById") + ": " + id);
         }
-        if (!Objects.equals(item.get().getOwner().getId(), itemDtoFromClient.getOwnerId())) {
-            throw new AccessDeniedException("user" + itemDtoFromClient.getOwnerId(), "item"
-                    + itemDtoFromClient.getId());
+        if (!Objects.equals(item.get().getOwner().getId(), ownerId)) {
+            throw new AccessDeniedException("user" + ownerId, "item" + id);
         }
 
         if (itemDtoFromClient.getName() != null) {
@@ -163,26 +137,19 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public CommentDtoToClient createComment(CommentDtoFromClient commentDtoFromClient) {
-        if (commentDtoFromClient == null) {
-            throw new ValidationException("comment", messageSource.get("item.ItemService.notNullComment"));
-        }
-        if (commentDtoFromClient.getAuthorId() == null) {
-            throw new ValidationException("authorId", messageSource.get("item.ItemService.notNullAuthorId"));
-        }
-        if (commentDtoFromClient.getItemId() == null) {
-            throw new ValidationException("itemId", messageSource.get("item.ItemService.notNullId"));
-        }
-        if (bookingRepository.getItemBookingsCountForBooker(commentDtoFromClient.getItemId(),
-                commentDtoFromClient.getAuthorId(), BookingStatus.APPROVED) == 0) {
+    public CommentDtoToClient createComment(Long authorId, Long itemId, CommentDtoFromClient commentDtoFromClient) {
+        if (bookingRepository.getItemBookingsCountForBooker(itemId, authorId, BookingStatus.APPROVED) == 0) {
             throw new ValidationException("comment", messageSource.get("item.ItemService.notBooked") + ": itemId "
-                    + commentDtoFromClient.getItemId() + ", authorId " + commentDtoFromClient.getAuthorId());
+                    + itemId + ", authorId " + authorId);
         }
 
-        Comment comment = CommentMapper.toComment(commentDtoFromClient);
+        commentDtoFromClient.setAuthorId(authorId);
+        commentDtoFromClient.setItemId(itemId);
+
+        Comment comment = CommentMapper.INSTANCE.toModel(commentDtoFromClient);
         comment.setCreated(LocalDateTime.now());
         comment = commentRepository.save(comment);
-        comment.setAuthor(userRepository.findById(comment.getAuthor().getId()).orElse(null));
-        return CommentMapper.toCommentDto(comment);
+        comment.setAuthor(userRepository.findById(authorId).orElse(null));
+        return CommentMapper.INSTANCE.toDto(comment);
     }
 }

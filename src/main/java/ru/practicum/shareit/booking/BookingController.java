@@ -8,9 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDtoFromClient;
 import ru.practicum.shareit.booking.dto.BookingDtoToClient;
-import ru.practicum.shareit.booking.service.BookingState;
 import ru.practicum.shareit.booking.service.BookingService;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import javax.validation.Valid;
 import java.util.Set;
@@ -29,11 +27,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<BookingDtoToClient> create(@RequestHeader("X-Sharer-User-Id") Long userId,
                                                      @Valid @RequestBody BookingDtoFromClient bookingDtoFromClient) {
-        if (bookingDtoFromClient == null) {
-            throw new ValidationException("booking", messageSource.get("booking.BookingService.notNullBooking"));
-        }
-        bookingDtoFromClient.setBookerId(userId);
-        BookingDtoToClient bookingDtoToClient = bookingService.create(bookingDtoFromClient);
+        BookingDtoToClient bookingDtoToClient = bookingService.create(userId, bookingDtoFromClient);
         log.info("{}: {}", messageSource.get("booking.BookingController.create"), bookingDtoToClient);
         return ResponseEntity.ok(bookingDtoToClient);
     }
@@ -55,30 +49,11 @@ public class BookingController {
         return ResponseEntity.ok(bookingDtoToClient);
     }
 
-    /*
-     * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
-     * в эндпоинтах readByBooker и readByOwner у RequestParam state тип можно было указать BookingState, тогда
-     * при некорректном state ошибка бы обрабатывалась с помощью ControllerErrorHandler, но тесты Postman ожидают
-     * заданный ответ
-     */
-    private BookingState getBookingState(String state) {
-        BookingState enumState = BookingState.ALL;
-        if (state != null) {
-            try {
-                enumState = BookingState.valueOf(state);
-            } catch (IllegalArgumentException ignored) {
-                // Тесты Postman ожидают именно такой ответ
-                throw new ValidationException("error", "Unknown state: UNSUPPORTED_STATUS");
-            }
-        }
-        return enumState;
-    }
-
     @GetMapping
     public ResponseEntity<Set<BookingDtoToClient>> readByBooker(@RequestHeader("X-Sharer-User-Id") Long userId,
                                                                 @RequestParam(value = "state", required = false)
                                                         String state) {
-        Set<BookingDtoToClient> bookings = bookingService.readByBooker(userId, getBookingState(state));
+        Set<BookingDtoToClient> bookings = bookingService.readByBooker(userId, state);
         log.info("{} ({}, {}): {}", messageSource.get("booking.BookingController.readByBooker"), userId, state,
                 bookings.stream().map(BookingDtoToClient::getId).collect(Collectors.toSet()));
         return ResponseEntity.ok(bookings);
@@ -88,7 +63,7 @@ public class BookingController {
     public ResponseEntity<Set<BookingDtoToClient>> readByOwner(@RequestHeader("X-Sharer-User-Id") Long userId,
                                                                @RequestParam(value = "state", required = false)
                                                         String state) {
-        Set<BookingDtoToClient> bookings = bookingService.readByOwner(userId, getBookingState(state));
+        Set<BookingDtoToClient> bookings = bookingService.readByOwner(userId, state);
         log.info("{} ({}, {}): {}", messageSource.get("booking.BookingController.readByOwner"), userId, state,
                 bookings.stream().map(BookingDtoToClient::getId).collect(Collectors.toSet()));
         return ResponseEntity.ok(bookings);

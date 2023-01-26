@@ -1,29 +1,20 @@
 package ru.practicum.shareit.booking.dto;
 
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.factory.Mappers;
 import ru.practicum.shareit.booking.model.Booking;
-import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.user.User;
 
-public class BookingMapper {
-    public static BookingDtoToClient toBookingDto(Booking booking) {
-        return booking == null ? null : new BookingDtoToClient(
-                booking.getId(),
-                booking.getStart(),
-                booking.getEnd(),
-                new ItemDtoToClient(booking.getItem().getId(), booking.getItem().getName()),
-                new BookerDtoToClient(booking.getBooker().getId()),
-                booking.getStatus()
-        );
-    }
+@Mapper
+public interface BookingMapper {
+    BookingMapper INSTANCE = Mappers.getMapper(BookingMapper.class);
 
-    public static Booking toBooking(BookingDtoFromClient bookingDtoFromClient) {
-        return bookingDtoFromClient == null ? null : new Booking(
-                bookingDtoFromClient.getId(),
-                bookingDtoFromClient.getStart(),
-                bookingDtoFromClient.getEnd(),
-                Item.builder().id(bookingDtoFromClient.getItemId()).build(),
-                User.builder().id(bookingDtoFromClient.getBookerId()).build(),
-                bookingDtoFromClient.getStatus()
-        );
-    }
+    @Mapping(target = "item.id", source = "item.id")
+    @Mapping(target = "item.name", source = "item.name")
+    @Mapping(target = "booker.id", source = "booker.id")
+    BookingDtoToClient toDto(Booking booking);
+
+    @Mapping(target = "item.id", source = "itemId")
+    @Mapping(target = "booker.id", source = "bookerId")
+    Booking toModel(BookingDtoFromClient bookingDto);
 }

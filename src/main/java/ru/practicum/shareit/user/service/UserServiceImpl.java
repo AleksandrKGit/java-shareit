@@ -8,7 +8,6 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.AlreadyExistException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.support.ConstraintChecker;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import ru.practicum.shareit.user.User;
@@ -30,18 +29,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto create(UserDto userDto) {
-        if (userDto == null) {
-            throw new ValidationException("user", messageSource.get("user.UserService.notNullUser"));
-        }
-        if (userDto.getName() == null) {
-            throw new ValidationException("name", messageSource.get("user.UserService.notNullName"));
-        }
-        if (userDto.getEmail() == null) {
-            throw new ValidationException("name", messageSource.get("user.UserService.notNullEmail"));
-        }
-
         try {
-            return UserMapper.toUserDto(userRepository.save(UserMapper.toUser(userDto)));
+            return UserMapper.INSTANCE.toDto(userRepository.save(UserMapper.INSTANCE.toModel(userDto)));
         } catch (DataIntegrityViolationException exception) {
             if (ConstraintChecker.check(exception, "uq_user_email")) {
                 throw new AlreadyExistException("email", messageSource.get("user.UserService.notUniqueEmail") + ": " +
@@ -54,7 +43,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Set<UserDto> readAll() {
-        return userRepository.findAll().stream().map(UserMapper::toUserDto)
+        return userRepository.findAll().stream().map(UserMapper.INSTANCE::toDto)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
@@ -64,22 +53,14 @@ public class UserServiceImpl implements UserService {
         if (user.isEmpty()) {
             throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": " + id);
         }
-        return UserMapper.toUserDto(user.get());
+        return UserMapper.INSTANCE.toDto(user.get());
     }
 
     @Override
-    public UserDto update(UserDto userDto) {
-        if (userDto == null) {
-            throw new ValidationException("user", messageSource.get("user.UserService.notNullUser"));
-        }
-        if (userDto.getId() == null) {
-            throw new ValidationException("id", messageSource.get("user.UserService.notNullId"));
-        }
-
-        Optional<User> user = userRepository.findById(userDto.getId());
+    public UserDto update(Long id, UserDto userDto) {
+        Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) {
-            throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": "
-                    + userDto.getId());
+            throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": " + id);
         }
 
         if (userDto.getEmail() != null) {
@@ -90,7 +71,7 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
-            return UserMapper.toUserDto(userRepository.save(user.get()));
+            return UserMapper.INSTANCE.toDto(userRepository.save(user.get()));
         } catch (DataIntegrityViolationException exception) {
             if (ConstraintChecker.check(exception, "uq_user_email")) {
                 throw new AlreadyExistException("email", messageSource.get("user.UserService.notUniqueEmail") + ": " +
@@ -103,9 +84,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void delete(Long id) {
-        if (id == null) {
-            throw new ValidationException("id", messageSource.get("user.UserService.notNullId"));
-        }
         try {
             userRepository.deleteById(id);
         } catch (EmptyResultDataAccessException ignored) {

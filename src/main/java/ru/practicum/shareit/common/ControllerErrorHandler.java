@@ -35,13 +35,20 @@ public class ControllerErrorHandler {
         return Map.of("serverError", messageSource.get("controller.serverError"));
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
-            MissingRequestHeaderException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public Map<String, String> handleHttpMessageNotReadableException(RuntimeException ex) {
+    public Map<String, String> handleHttpMessageNotReadableException(Exception ex) {
         log.warn(messageSource.get("controller.incorrectDataFormat") + ": " + ex.toString());
         return Map.of("requestError", messageSource.get("controller.incorrectDataFormat"));
+    }
+
+    @ExceptionHandler({MissingRequestHeaderException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public Map<String, String> handleMissingRequestHeaderException(MissingRequestHeaderException ex) {
+        log.warn(messageSource.get("controller.messingHeader") + ": " + ex.getHeaderName());
+        return Map.of("requestError", messageSource.get("controller.messingHeader") + ": " + ex.getHeaderName());
     }
 
     @ExceptionHandler

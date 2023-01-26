@@ -39,22 +39,7 @@ public class BookingServiceImpl implements BookingService {
 
 
     @Override
-    public BookingDtoToClient create(BookingDtoFromClient bookingDtoFromClient) {
-        if (bookingDtoFromClient == null) {
-            throw new ValidationException("booking", messageSource.get("booking.BookingService.notNullBooking"));
-        }
-        if (bookingDtoFromClient.getBookerId() == null) {
-            throw new ValidationException("bookerId", messageSource.get("booking.BookingService.notNullBookerId"));
-        }
-        if (bookingDtoFromClient.getItemId() == null) {
-            throw new ValidationException("itemId", messageSource.get("booking.BookingService.notNullItemId"));
-        }
-        if (bookingDtoFromClient.getStart() == null) {
-            throw new ValidationException("start", messageSource.get("booking.BookingService.notNullStart"));
-        }
-        if (bookingDtoFromClient.getEnd() == null) {
-            throw new ValidationException("end", messageSource.get("booking.BookingService.notNullEnd"));
-        }
+    public BookingDtoToClient create(Long bookerId, BookingDtoFromClient bookingDtoFromClient) {
         if (!bookingDtoFromClient.getStart().isBefore(bookingDtoFromClient.getEnd())) {
             throw new ValidationException("start", messageSource.get("booking.BookingService.startBeforeEnd"));
         }
@@ -76,9 +61,8 @@ public class BookingServiceImpl implements BookingService {
         if (!item.get().getAvailable()) {
             throw new ValidationException("itemId", messageSource.get("booking.BookingService.itemNotAvailable"));
         }
-        if (Objects.equals(item.get().getOwner().getId(), bookingDtoFromClient.getBookerId())) {
-            throw new NotFoundException("itemId", item.get().getId() + " for user with id "
-                    + bookingDtoFromClient.getBookerId());
+        if (Objects.equals(item.get().getOwner().getId(), bookerId)) {
+            throw new NotFoundException("itemId", item.get().getId() + " for user with id " + bookerId);
         }
 
         /*
@@ -86,15 +70,17 @@ public class BookingServiceImpl implements BookingService {
          * Здесь идёт дополнительный запрос к базе данных ввиду того, что при ошибке операции INSERT, которая возникает
          * из-за несуществующего booker_id, PostgreSQL инкрементирует значение id, а тесты Postman это не учитывают.
          */
-        if (!userRepository.existsById(bookingDtoFromClient.getBookerId())) {
+        if (!userRepository.existsById(bookerId)) {
             throw new NotFoundException("bookerId", messageSource.get("booking.BookingService.notFoundBookerById")
-                    + ": " + bookingDtoFromClient.getBookerId());
+                    + ": " + bookerId);
         }
 
+        bookingDtoFromClient.setBookerId(bookerId);
+
         try {
-            Booking booking = bookingRepository.save(BookingMapper.toBooking(bookingDtoFromClient));
+            Booking booking = bookingRepository.save(BookingMapper.INSTANCE.toModel(bookingDtoFromClient));
             booking.setItem(item.get());
-            return BookingMapper.toBookingDto(booking);
+            return BookingMapper.INSTANCE.toDto(booking);
         } catch (DataIntegrityViolationException exception) {
             // Обработка несуществующего booker_id без дополнительного запроса к БД
             if (ConstraintChecker.check(exception, "fk_booking_booker")) {
@@ -107,43 +93,41 @@ public class BookingServiceImpl implements BookingService {
 
     }
 
-    @Override
-    public BookingDtoToClient approve(Long id, Long ownerId, boolean approved) {
-        if (id == null) {
-            throw new ValidationException("id", messageSource.get("booking.BookingService.notNullId"));
+    private void validateApprovingBooking(Long ownerId, Booking booking, boolean approved) {
+        if (!Objects.equals(booking.getItem().getOwner().getId(), ownerId)) {
+            throw new NotFoundException("itemId", booking.getItem().getId() + " for user with id " + ownerId);
         }
-        if (ownerId == null) {
-            throw new ValidationException("ownerId", messageSource.get("booking.BookingService.notNullOwnerId"));
+        if (!booking.getStatus().equals(BookingStatus.WAITING)) {
+            throw new ValidationException("status", messageSource.get("booking.BookingService.statusIsWaiting")
+                    + ": " + booking.getStatus());
+        }
+        if (!booking.getItem().getAvailable()) {
+            throw new ValidationException("item", messageSource.get("booking.BookingService.itemNotAvailable")
+                    + ": " + booking.getItem().getId());
+        }
+        if (!booking.getEnd().isAfter(LocalDateTime.now())) {
+            throw new ValidationException("id", messageSource.get("booking.BookingService.endInFuture"));
         }
 
+        if (approved && (bookingRepository.getApprovedBookingsCountInPeriodForItem(booking.getItem().getId(),
+                BookingStatus.APPROVED, booking.getStart(), booking.getEnd()) > 0)) {
+            throw new ValidationException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
+                    + booking.getItem().getId() + " " + booking.getStart() + " " + booking.getEnd());
+        }
+    }
+
+    @Override
+    public BookingDtoToClient approve(Long id, Long ownerId, boolean approved) {
         Optional<Booking> booking = bookingRepository.findById(id);
         if (booking.isEmpty()) {
             throw new NotFoundException("id", messageSource.get("booking.BookingService.notFoundById") + ": " + id);
         }
-        if (!Objects.equals(booking.get().getItem().getOwner().getId(), ownerId)) {
-            throw new NotFoundException("itemId", booking.get().getItem().getId() + " for user with id " + ownerId);
-        }
-        if (!booking.get().getStatus().equals(BookingStatus.WAITING)) {
-            throw new ValidationException("status", messageSource.get("booking.BookingService.statusIsWaiting")
-                    + ": " + booking.get().getStatus());
-        }
-        if (!booking.get().getItem().getAvailable()) {
-            throw new ValidationException("item", messageSource.get("booking.BookingService.itemNotAvailable")
-                    + ": " + booking.get().getItem().getId());
-        }
-        if (!booking.get().getEnd().isAfter(LocalDateTime.now())) {
-            throw new ValidationException("id", messageSource.get("booking.BookingService.endInFuture"));
-        }
 
-        if (approved && (bookingRepository.getApprovedBookingsCountInPeriodForItem(booking.get().getItem().getId(),
-                BookingStatus.APPROVED, booking.get().getStart(), booking.get().getEnd()) > 0)) {
-            throw new ValidationException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
-                    + booking.get().getItem().getId() + " " + booking.get().getStart() + " " + booking.get().getEnd());
-        }
+        validateApprovingBooking(ownerId, booking.get(), approved);
 
         booking.get().setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 
-        return BookingMapper.toBookingDto(bookingRepository.save(booking.get()));
+        return BookingMapper.INSTANCE.toDto(bookingRepository.save(booking.get()));
     }
 
     @Override
@@ -156,28 +140,30 @@ public class BookingServiceImpl implements BookingService {
                 !Objects.equals(booking.get().getItem().getOwner().getId(), userId)) {
             throw new NotFoundException("itemId", booking.get().getItem().getId() + " for user with id " + userId);
         }
-        return BookingMapper.toBookingDto(booking.get());
+        return BookingMapper.INSTANCE.toDto(booking.get());
+    }
+
+    private BookingState getBookingState(String state) {
+        BookingState enumState = BookingState.ALL;
+        if (state != null) {
+            try {
+                enumState = BookingState.valueOf(state);
+            } catch (IllegalArgumentException ignored) {
+                // Тесты Postman ожидают именно такой ответ
+                throw new ValidationException("error", "Unknown state: UNSUPPORTED_STATUS");
+            }
+        }
+        return enumState;
     }
 
     @Override
-    public Set<BookingDtoToClient> readByBooker(Long bookerId, BookingState state) {
+    public Set<BookingDtoToClient> readByBooker(Long bookerId, String state) {
         if (bookerId == null) {
             throw new ValidationException("bookerId", messageSource.get("booking.BookingService.notNullBookerId"));
         }
-        /*
-         * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
-         * В случае, если пользователь не найден, Postman ожидает ошибку Not Found, а не пустой список в ответ
-         */
-        if (!userRepository.existsById(bookerId)) {
-            throw new NotFoundException("bookerId", messageSource.get("booking.BookingService.notFoundBookerById")
-                    + ": " + bookerId);
-        }
 
-        if (state == null) {
-            state = BookingState.ALL;
-        }
         Set<Booking> bookings;
-        switch (state) {
+        switch (getBookingState(state)) {
             case CURRENT:
                 bookings = bookingRepository.findCurrentForBooker(bookerId);
                 break;
@@ -196,28 +182,23 @@ public class BookingServiceImpl implements BookingService {
             default:
                 bookings = bookingRepository.findAllForBooker(bookerId);
         }
-        return bookings.stream().map(BookingMapper::toBookingDto).collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (bookings.size() == 0) {
+            throw new NotFoundException("noBookingsFound", messageSource.get("booking.BookingService.noBookingsFound"));
+        }
+
+        return bookings.stream().map(BookingMapper.INSTANCE::toDto)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override
-    public Set<BookingDtoToClient> readByOwner(Long ownerId, BookingState state) {
+    public Set<BookingDtoToClient> readByOwner(Long ownerId, String state) {
         if (ownerId == null) {
             throw new ValidationException("bookerId", messageSource.get("booking.BookingService.notNullOwnerId"));
         }
-        /*
-         * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
-         * В случае, если пользователь не найден, Postman ожидает ошибку Not Found, а не пустой список в ответ
-         */
-        if (!userRepository.existsById(ownerId)) {
-            throw new NotFoundException("bookerId", messageSource.get("booking.BookingService.notFoundOwnerById")
-                    + ": " + ownerId);
-        }
 
-        if (state == null) {
-            state = BookingState.ALL;
-        }
         Set<Booking> bookings;
-        switch (state) {
+        switch (getBookingState(state)) {
             case CURRENT:
                 bookings = bookingRepository.findCurrentForOwner(ownerId);
                 break;
@@ -236,6 +217,12 @@ public class BookingServiceImpl implements BookingService {
             default:
                 bookings = bookingRepository.findAllForOwner(ownerId);
         }
-        return bookings.stream().map(BookingMapper::toBookingDto).collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (bookings.size() == 0) {
+            throw new NotFoundException("noBookingsFound", messageSource.get("booking.BookingService.noBookingsFound"));
+        }
+
+        return bookings.stream().map(BookingMapper.INSTANCE::toDto)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }
