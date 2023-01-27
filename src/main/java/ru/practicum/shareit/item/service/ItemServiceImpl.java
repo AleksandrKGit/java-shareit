@@ -3,7 +3,6 @@ package ru.practicum.shareit.item.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
@@ -17,8 +16,8 @@ import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.dto.CommentMapper;
-import ru.practicum.shareit.support.ConstraintChecker;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
@@ -61,33 +60,17 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDtoToClient create(Long ownerId, ItemDtoFromClient itemDtoFromClient) {
-        /*
-         * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
-         * Здесь идёт дополнительный запрос к базе данных ввиду того, что при ошибке операции INSERT, которая возникает
-         * из-за несуществующего owner_id, PostgreSQL инкрементирует значение id, а тесты Postman это не учитывают.
-         */
-        if (!userRepository.existsById(ownerId)) {
+        Optional<User> owner = userRepository.findById(ownerId);
+        if (owner.isEmpty()) {
             throw new NotFoundException("ownerId", messageSource.get("item.ItemService.notFoundOwnerById") + ": "
                     + ownerId);
         }
 
         itemDtoFromClient.setOwnerId(ownerId);
 
-        try {
-            return mapToItemDto(itemRepository.save(ItemMapper.INSTANCE.toModel(itemDtoFromClient)),
-                    false, false);
-        } catch (DataIntegrityViolationException exception) {
-            // Обработка несуществующего owner_id без дополнительного запроса к БД
-            if (ConstraintChecker.check(exception, "fk_item_owner")) {
-                throw new NotFoundException("ownerId", messageSource.get("item.ItemService.notFoundOwnerById") + ": "
-                        + itemDtoFromClient.getOwnerId());
-            } else if (ConstraintChecker.check(exception, "fk_item_request")) {
-                throw new NotFoundException("request_id", messageSource.get("item.ItemService.notFoundRequestById")
-                        + ": " + itemDtoFromClient.getRequestId());
-            } else {
-                throw exception;
-            }
-        }
+        Item item = itemRepository.save(ItemMapper.INSTANCE.toModel(itemDtoFromClient));
+        item.setOwner(owner.get());
+        return mapToItemDto(item, false, false);
     }
 
     @Override
@@ -136,12 +119,16 @@ public class ItemServiceImpl implements ItemService {
         return mapToItemDto(itemRepository.save(item.get()), true, false);
     }
 
-    @Override
-    public CommentDtoToClient createComment(Long authorId, Long itemId, CommentDtoFromClient commentDtoFromClient) {
+    private void validateCreatingComment(Long authorId, Long itemId) {
         if (bookingRepository.getItemBookingsCountForBooker(itemId, authorId, BookingStatus.APPROVED) == 0) {
             throw new ValidationException("comment", messageSource.get("item.ItemService.notBooked") + ": itemId "
                     + itemId + ", authorId " + authorId);
         }
+    }
+
+    @Override
+    public CommentDtoToClient createComment(Long authorId, Long itemId, CommentDtoFromClient commentDtoFromClient) {
+        validateCreatingComment(authorId, itemId);
 
         commentDtoFromClient.setAuthorId(authorId);
         commentDtoFromClient.setItemId(itemId);

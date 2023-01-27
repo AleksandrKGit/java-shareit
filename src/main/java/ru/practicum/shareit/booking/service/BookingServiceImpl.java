@@ -3,7 +3,6 @@ package ru.practicum.shareit.booking.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.*;
 import ru.practicum.shareit.booking.dto.BookingMapper;
@@ -15,8 +14,8 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
-import ru.practicum.shareit.support.ConstraintChecker;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
@@ -37,9 +36,7 @@ public class BookingServiceImpl implements BookingService {
 
     DefaultLocaleMessageSource messageSource;
 
-
-    @Override
-    public BookingDtoToClient create(Long bookerId, BookingDtoFromClient bookingDtoFromClient) {
+    private void validateCreatingBooking(BookingDtoFromClient bookingDtoFromClient) {
         if (!bookingDtoFromClient.getStart().isBefore(bookingDtoFromClient.getEnd())) {
             throw new ValidationException("start", messageSource.get("booking.BookingService.startBeforeEnd"));
         }
@@ -50,53 +47,45 @@ public class BookingServiceImpl implements BookingService {
                     + bookingDtoFromClient.getItemId() + " " + bookingDtoFromClient.getStart() + " "
                     + bookingDtoFromClient.getEnd());
         }
+    }
 
-        bookingDtoFromClient.setStatus(BookingStatus.WAITING);
+    private void validateCreatingBookingItem(Item item) {
+        if (!item.getAvailable()) {
+            throw new ValidationException("itemId", messageSource.get("booking.BookingService.itemNotAvailable"));
+        }
+    }
+
+    @Override
+    public BookingDtoToClient create(Long bookerId, BookingDtoFromClient bookingDtoFromClient) {
+        validateCreatingBooking(bookingDtoFromClient);
 
         Optional<Item> item = itemRepository.findById(bookingDtoFromClient.getItemId());
         if (item.isEmpty()) {
             throw new NotFoundException("itemId", messageSource.get("booking.BookingService.notFoundItemById") + ": "
                     + bookingDtoFromClient.getItemId());
         }
-        if (!item.get().getAvailable()) {
-            throw new ValidationException("itemId", messageSource.get("booking.BookingService.itemNotAvailable"));
-        }
         if (Objects.equals(item.get().getOwner().getId(), bookerId)) {
             throw new NotFoundException("itemId", item.get().getId() + " for user with id " + bookerId);
         }
 
-        /*
-         * КОСТЫЛЬ ДЛЯ ТЕСТОВ POSTMAN
-         * Здесь идёт дополнительный запрос к базе данных ввиду того, что при ошибке операции INSERT, которая возникает
-         * из-за несуществующего booker_id, PostgreSQL инкрементирует значение id, а тесты Postman это не учитывают.
-         */
-        if (!userRepository.existsById(bookerId)) {
+        validateCreatingBookingItem(item.get());
+
+        Optional<User> booker = userRepository.findById(bookerId);
+        if (booker.isEmpty()) {
             throw new NotFoundException("bookerId", messageSource.get("booking.BookingService.notFoundBookerById")
                     + ": " + bookerId);
         }
 
+        bookingDtoFromClient.setStatus(BookingStatus.WAITING);
         bookingDtoFromClient.setBookerId(bookerId);
 
-        try {
-            Booking booking = bookingRepository.save(BookingMapper.INSTANCE.toModel(bookingDtoFromClient));
-            booking.setItem(item.get());
-            return BookingMapper.INSTANCE.toDto(booking);
-        } catch (DataIntegrityViolationException exception) {
-            // Обработка несуществующего booker_id без дополнительного запроса к БД
-            if (ConstraintChecker.check(exception, "fk_booking_booker")) {
-                throw new NotFoundException("bookerId", messageSource.get("booking.BookingService.notFoundBookerById")
-                        + ": " + bookingDtoFromClient.getBookerId());
-            } else {
-                throw exception;
-            }
-        }
-
+        Booking booking = bookingRepository.save(BookingMapper.INSTANCE.toModel(bookingDtoFromClient));
+        booking.setItem(item.get());
+        booking.setBooker(booker.get());
+        return BookingMapper.INSTANCE.toDto(booking);
     }
 
-    private void validateApprovingBooking(Long ownerId, Booking booking, boolean approved) {
-        if (!Objects.equals(booking.getItem().getOwner().getId(), ownerId)) {
-            throw new NotFoundException("itemId", booking.getItem().getId() + " for user with id " + ownerId);
-        }
+    private void validateApprovingBooking(Booking booking, boolean approved) {
         if (!booking.getStatus().equals(BookingStatus.WAITING)) {
             throw new ValidationException("status", messageSource.get("booking.BookingService.statusIsWaiting")
                     + ": " + booking.getStatus());
@@ -122,8 +111,11 @@ public class BookingServiceImpl implements BookingService {
         if (booking.isEmpty()) {
             throw new NotFoundException("id", messageSource.get("booking.BookingService.notFoundById") + ": " + id);
         }
+        if (!Objects.equals(booking.get().getItem().getOwner().getId(), ownerId)) {
+            throw new NotFoundException("itemId", booking.get().getItem().getId() + " for user with id " + ownerId);
+        }
 
-        validateApprovingBooking(ownerId, booking.get(), approved);
+        validateApprovingBooking(booking.get(), approved);
 
         booking.get().setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 
@@ -143,13 +135,12 @@ public class BookingServiceImpl implements BookingService {
         return BookingMapper.INSTANCE.toDto(booking.get());
     }
 
-    private BookingState getBookingState(String state) {
+    private BookingState getValidBookingState(String state) {
         BookingState enumState = BookingState.ALL;
         if (state != null) {
             try {
                 enumState = BookingState.valueOf(state);
             } catch (IllegalArgumentException ignored) {
-                // Тесты Postman ожидают именно такой ответ
                 throw new ValidationException("error", "Unknown state: UNSUPPORTED_STATUS");
             }
         }
@@ -158,12 +149,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Set<BookingDtoToClient> readByBooker(Long bookerId, String state) {
-        if (bookerId == null) {
-            throw new ValidationException("bookerId", messageSource.get("booking.BookingService.notNullBookerId"));
-        }
-
         Set<Booking> bookings;
-        switch (getBookingState(state)) {
+        switch (getValidBookingState(state)) {
             case CURRENT:
                 bookings = bookingRepository.findCurrentForBooker(bookerId);
                 break;
@@ -193,12 +180,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Set<BookingDtoToClient> readByOwner(Long ownerId, String state) {
-        if (ownerId == null) {
-            throw new ValidationException("bookerId", messageSource.get("booking.BookingService.notNullOwnerId"));
-        }
-
         Set<Booking> bookings;
-        switch (getBookingState(state)) {
+        switch (getValidBookingState(state)) {
             case CURRENT:
                 bookings = bookingRepository.findCurrentForOwner(ownerId);
                 break;
