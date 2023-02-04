@@ -1,21 +1,16 @@
 package ru.practicum.shareit.request;
 
-public class ItemRequestMapper {
-    public static ItemRequestDto toItemRequestDto(ItemRequest itemRequest) {
-        return new ItemRequestDto(
-                itemRequest.getId(),
-                itemRequest.getDescription(),
-                itemRequest.getRequestor() != null ? itemRequest.getRequestor().getId() : null,
-                itemRequest.getCreated()
-        );
-    }
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.factory.Mappers;
 
-    public static ItemRequest toItemRequest(ItemRequestDto itemRequestDto) {
-        return new ItemRequest(
-                itemRequestDto.getId(),
-                itemRequestDto.getDescription(),
-                null,
-                itemRequestDto.getCreated()
-        );
-    }
+@Mapper
+public interface ItemRequestMapper {
+    ItemRequestMapper INSTANCE = Mappers.getMapper(ItemRequestMapper.class);
+
+    @Mapping(target = "requestorId", source = "requestor.id")
+    ItemRequestDto toDto(ItemRequest itemRequest);
+
+    @Mapping(target = "requestor.id", source = "requestorId")
+    ItemRequest toModel(ItemRequestDto itemRequestDto);
 }

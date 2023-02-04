@@ -1,7 +1,6 @@
 package ru.practicum.shareit.support;
 
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-
 import java.util.Locale;
 
 public class DefaultLocaleMessageSource extends ReloadableResourceBundleMessageSource {

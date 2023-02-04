@@ -1,11 +1,12 @@
 package ru.practicum.shareit.common;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -22,28 +23,32 @@ import java.util.TreeMap;
 
 @ControllerAdvice
 @Slf4j
+@RequiredArgsConstructor
 public class ControllerErrorHandler {
     private final DefaultLocaleMessageSource messageSource;
-
-    @Autowired
-    public ControllerErrorHandler(DefaultLocaleMessageSource messageSource) {
-        this.messageSource = messageSource;
-    }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
     public Map<String, String> handleException(Exception ex) {
-        log.warn(messageSource.get("controller.serverError") + ": " + ex.getMessage());
+        log.warn(messageSource.get("controller.serverError") + ": " + ex.getClass() + " " + ex.getMessage());
         return Map.of("serverError", messageSource.get("controller.serverError"));
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public Map<String, String> handleHttpMessageNotReadableException(RuntimeException ex) {
+    public Map<String, String> handleHttpMessageNotReadableException(Exception ex) {
         log.warn(messageSource.get("controller.incorrectDataFormat") + ": " + ex.toString());
         return Map.of("requestError", messageSource.get("controller.incorrectDataFormat"));
+    }
+
+    @ExceptionHandler({MissingRequestHeaderException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public Map<String, String> handleMissingRequestHeaderException(MissingRequestHeaderException ex) {
+        log.warn(messageSource.get("controller.messingHeader") + ": " + ex.getHeaderName());
+        return Map.of("requestError", messageSource.get("controller.messingHeader") + ": " + ex.getHeaderName());
     }
 
     @ExceptionHandler
