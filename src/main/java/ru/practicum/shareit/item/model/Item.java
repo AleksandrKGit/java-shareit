@@ -5,16 +5,13 @@ import lombok.experimental.FieldDefaults;
 import ru.practicum.shareit.request.ItemRequest;
 import ru.practicum.shareit.user.User;
 import javax.persistence.*;
+import java.util.Objects;
 
 @Entity
 @Table(name = "items")
 @Getter
 @Setter
-@ToString
-@AllArgsConstructor
-@NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Builder(toBuilder = true)
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,10 +20,10 @@ public class Item {
     @Column(nullable = false)
     String name;
 
-    @Column(length = 2000)
+    @Column(nullable = false, length = 2000)
     String description;
 
-    @Column(name = "is_available")
+    @Column(nullable = false, name = "is_available")
     Boolean available;
 
     @ManyToOne
@@ -36,4 +33,22 @@ public class Item {
     @ManyToOne
     @JoinColumn(updatable = false)
     ItemRequest request;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof Item)) {
+            return false;
+        }
+
+        return id != null && id.equals(((Item) obj).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
+    }
 }

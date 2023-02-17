@@ -1,4 +1,4 @@
-package ru.practicum.shareit.item.dto;
+package ru.practicum.shareit.user.dto;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -6,9 +6,11 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @Setter
 @ToString
-@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class BookingDto {
+public class UserDtoToClient {
     Long id;
-    Long bookerId;
+
+    String name;
+
+    String email;
 }

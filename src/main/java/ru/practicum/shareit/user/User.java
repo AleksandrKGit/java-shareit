@@ -1,18 +1,15 @@
 package ru.practicum.shareit.user;
 
+import javax.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import javax.persistence.*;
+import java.util.Objects;
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
-@ToString
-@AllArgsConstructor
-@NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Builder(toBuilder = true)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,4 +20,22 @@ public class User {
 
     @Column(nullable = false, unique = true)
     String email;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof User)) {
+            return false;
+        }
+
+        return id != null && id.equals(((User) obj).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
+    }
 }

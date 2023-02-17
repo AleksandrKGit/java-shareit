@@ -1,20 +1,19 @@
 package ru.practicum.shareit.item.dto;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
+import org.mapstruct.*;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.item.model.Item;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface ItemMapper {
-    ItemMapper INSTANCE = Mappers.getMapper(ItemMapper.class);
+    @Mapping(target = "requestId", source = "request.id")
+    ItemDtoToClient toDto(Item entity);
 
-    ItemDtoToClient toDto(Item item);
-
-    @Mapping(target = "owner.id", source = "ownerId")
-    Item toModel(ItemDtoFromClient itemDto);
+    Item toEntity(ItemDtoFromClient dto);
 
     @Mapping(target = "bookerId", source = "booker.id")
-    BookingDto toBookingDto(Booking booking);
+    BookingDtoToClient toDto(Booking entity);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromDto(ItemDtoFromClient dto, @MappingTarget Item entity);
 }

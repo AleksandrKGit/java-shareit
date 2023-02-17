@@ -8,55 +8,59 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
+import ru.practicum.shareit.user.dto.UserDtoFromClient;
+import ru.practicum.shareit.user.dto.UserDtoToClient;
 import ru.practicum.shareit.user.service.UserService;
 import ru.practicum.shareit.validation.groups.OnCreate;
 import ru.practicum.shareit.validation.groups.OnUpdate;
-import java.util.Set;
+import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping(path = "/users")
-@Slf4j
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
     DefaultLocaleMessageSource messageSource;
 
-    UserService userService;
+    UserService service;
 
     @PostMapping
-    public ResponseEntity<UserDto> create(@Validated(OnCreate.class) @RequestBody UserDto userDto) {
-        userDto = userService.create(userDto);
-        log.info("{}: {}", messageSource.get("user.UserController.create"), userDto);
-        return ResponseEntity.ok(userDto);
+    public ResponseEntity<UserDtoToClient> create(@Validated(OnCreate.class) @RequestBody
+                                                      UserDtoFromClient inDto) {
+        UserDtoToClient outDto = service.create(inDto);
+        log.info("{}: {}", messageSource.get("user.UserController.create"), outDto);
+        return ResponseEntity.ok(outDto);
     }
 
     @GetMapping
-    public ResponseEntity<Set<UserDto>> readAll() {
-        Set<UserDto> usersDto = userService.readAll();
+    public ResponseEntity<List<UserDtoToClient>> readAll() {
+        List<UserDtoToClient> dtoList = service.readAll();
         log.info("{}: {}", messageSource.get("user.UserController.readAll"),
-                usersDto.stream().map(UserDto::getId).collect(Collectors.toSet()));
-        return ResponseEntity.ok(usersDto);
+                dtoList.stream().map(UserDtoToClient::getId).collect(Collectors.toList()));
+        return ResponseEntity.ok(dtoList);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> readById(@PathVariable Long id) {
-        UserDto userDto = userService.readById(id);
-        log.info("{}: {}", messageSource.get("user.UserController.readById"), userDto);
-        return ResponseEntity.ok(userDto);
+    public ResponseEntity<UserDtoToClient> readById(@PathVariable Long id) {
+        UserDtoToClient dto = service.readById(id);
+        log.info("{}: {}", messageSource.get("user.UserController.readById"), dto);
+        return ResponseEntity.ok(dto);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<UserDto> update(@PathVariable Long id,
-                                          @Validated(OnUpdate.class) @RequestBody UserDto userDto) {
-        userDto = userService.update(id, userDto);
-        log.info("{}: {}", messageSource.get("user.UserController.update"), userDto);
-        return ResponseEntity.ok(userDto);
+    public ResponseEntity<UserDtoToClient> update(@PathVariable Long id,
+                                                  @Validated(OnUpdate.class) @RequestBody
+                                                  UserDtoFromClient inDto) {
+        UserDtoToClient outDto = service.update(id, inDto);
+        log.info("{}: {}", messageSource.get("user.UserController.update"), outDto);
+        return ResponseEntity.ok(outDto);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Long id) {
-        userService.delete(id);
+        service.delete(id);
         log.info("{}: {}", messageSource.get("user.UserController.delete"), id);
         return ResponseEntity.ok("");
     }
