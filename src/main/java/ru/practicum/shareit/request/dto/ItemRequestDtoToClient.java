@@ -1,6 +1,7 @@
 package ru.practicum.shareit.request.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import java.time.LocalDateTime;
@@ -20,5 +21,6 @@ public class ItemRequestDtoToClient {
     @JsonFormat(pattern = DATE_PATTERN)
     LocalDateTime created;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     List<ItemDtoToClient> items;
 }

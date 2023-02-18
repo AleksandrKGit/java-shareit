@@ -1,48 +1,71 @@
 package ru.practicum.shareit.request.dto;
 
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.request.ItemRequest;
 import java.time.LocalDateTime;
+import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.*;
 import static ru.practicum.shareit.tools.factories.ItemFactory.createItem;
 import static ru.practicum.shareit.tools.factories.ItemRequestFactory.*;
 import static ru.practicum.shareit.tools.factories.UserFactory.createUser;
 
 @SpringBootTest(classes = {ItemRequestMapperImpl.class})
+@FieldDefaults(level = AccessLevel.PRIVATE)
 class ItemRequestMapperTest {
     @Autowired
-    private ItemRequestMapper itemRequestMapper;
+    ItemRequestMapper itemRequestMapper;
+
+    ItemRepository repository;
+
+    @BeforeEach
+    void setUp() {
+        repository = mock(ItemRepository.class);
+    }
 
     @Test
-    void toDto_withNotNullFields_shouldReturnDtoWithNotNullFields() {
+    void toDto_withNotNullFieldsAndRepository_shouldReturnDtoWithNotNullFields() {
         ItemRequest source = createItemRequest(10L, "name", LocalDateTime.now(),
                 createUser(1000L, "name", "email"));
+        List<Item> items = List.of(createItem(2L, "itemName", "itemDesc", true, null,
+                source));
+        when(repository.findByRequest_IdOrderByIdAsc(source.getId())).thenReturn(items);
 
-        ItemRequestDtoToClient target = itemRequestMapper.toDto(source);
+        ItemRequestDtoToClient target = itemRequestMapper.toDto(source, repository);
 
         assertThat(target, allOf(
                 hasProperty("id", equalTo(source.getId())),
                 hasProperty("description", equalTo(source.getDescription())),
                 hasProperty("created", equalTo(source.getCreated())),
-                hasProperty("items", is(nullValue()))
+                hasProperty("items", contains(allOf(
+                        hasProperty("id", equalTo(items.get(0).getId())),
+                        hasProperty("name", equalTo(items.get(0).getName())),
+                        hasProperty("description", equalTo(items.get(0).getDescription())),
+                        hasProperty("available", equalTo(items.get(0).getAvailable())),
+                        hasProperty("requestId", equalTo(items.get(0).getRequest().getId()))
+                )))
         ));
     }
 
     @Test
-    void toDto_withNull_shouldReturnNull() {
-        assertThat(itemRequestMapper.toDto((ItemRequest) null), is(nullValue()));
+    void toDto_withNullAndNullRepository_shouldReturnNull() {
+        assertThat(itemRequestMapper.toDto(null, null), is(nullValue()));
     }
 
     @Test
-    void toDto_withNullFields_shouldReturnDtoWithNullFields() {
+    void toDto_withNullFieldsAndRepository_shouldReturnDtoWithNullFields() {
         ItemRequest source = createItemRequest(null, null, null, null);
 
-        ItemRequestDtoToClient target = itemRequestMapper.toDto(source);
+        ItemRequestDtoToClient target = itemRequestMapper.toDto(source, null);
 
         assertThat(target, allOf(
                 hasProperty("id", is(nullValue())),
@@ -59,7 +82,7 @@ class ItemRequestMapperTest {
                 createItemRequest(30L, "name", LocalDateTime.now(),
                         createUser(40L, "requestor", "requestor@email.com")));
 
-        ItemDtoToClient target = itemRequestMapper.toDto(source);
+        ItemDtoToClient target = itemRequestMapper.toItemDto(source);
 
         assertThat(target, allOf(
                 hasProperty("id", equalTo(source.getId())),
@@ -72,7 +95,7 @@ class ItemRequestMapperTest {
 
     @Test
     void toItemDto_withNull_shouldReturnNull() {
-        assertThat(itemRequestMapper.toDto((Item) null), is(nullValue()));
+        assertThat(itemRequestMapper.toItemDto(null), is(nullValue()));
     }
 
     @Test
@@ -81,7 +104,7 @@ class ItemRequestMapperTest {
                 createItemRequest(null, "description", LocalDateTime.now(),
                         createUser(1L, "name", "info@email.com")));
 
-        ItemDtoToClient target = itemRequestMapper.toDto(source);
+        ItemDtoToClient target = itemRequestMapper.toItemDto(source);
 
         assertThat(target, allOf(
                 hasProperty("id", is(nullValue())),
@@ -96,7 +119,7 @@ class ItemRequestMapperTest {
     void toItemDto_withNullFields_shouldReturnDtoWithNullFields() {
         Item source = createItem(null, null, null, null, null, null);
 
-        ItemDtoToClient target = itemRequestMapper.toDto(source);
+        ItemDtoToClient target = itemRequestMapper.toItemDto(source);
 
         assertThat(target, allOf(
                 hasProperty("id", is(nullValue())),

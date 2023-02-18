@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.common.OffsetPageRequest;
@@ -25,7 +24,6 @@ import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,29 +44,6 @@ public class ItemServiceImpl implements ItemService {
     ItemMapper mapper;
 
     CommentMapper commentMapper;
-
-    private ItemDtoToClient mapToItemDto(Item item, boolean showBooking, boolean showComments) {
-        ItemDtoToClient dto = mapper.toDto(item);
-
-        if (showBooking) {
-            LocalDateTime now = LocalDateTime.now();
-
-            Booking last = bookingRepository.findFirst1ByItem_IdAndEndLessThanOrderByEndDesc(item.getId(), now)
-                    .orElse(null);
-            Booking next = bookingRepository.findFirst1ByItem_IdAndStartGreaterThanOrderByStartAsc(item.getId(), now)
-                    .orElse(null);
-
-            dto.setLastBooking(mapper.toDto(last));
-            dto.setNextBooking(mapper.toDto(next));
-        }
-
-        if (showComments) {
-            dto.setComments(commentRepository.findByItem_IdOrderByCreatedDesc(item.getId()).stream()
-                    .map(commentMapper::toDto).collect(Collectors.toList()));
-        }
-
-        return dto;
-    }
 
     @Override
     public ItemDtoToClient create(Long ownerId, ItemDtoFromClient dto) {
@@ -95,7 +70,7 @@ public class ItemServiceImpl implements ItemService {
 
         entity = repository.saveAndFlush(entity);
 
-        return mapToItemDto(entity, false, false);
+        return mapper.toDto(entity, ownerId, null, null);
     }
 
     private void validateItemWasBooked(Long authorId, Long itemId) {
@@ -129,21 +104,16 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDtoToClient> readByOwner(Long ownerId, Integer from, Integer size) {
-        return repository.findByOwner_Id(ownerId,
-                        OffsetPageRequest.ofOffset(from, size, Sort.by("id").ascending()))
-                .stream()
-                .map(item -> mapToItemDto(item, true, true))
-                .collect(Collectors.toList());
+        return mapper.toDtoList(repository.findByOwner_Id(ownerId,
+                        OffsetPageRequest.ofOffset(from, size, Sort.by("id").ascending())).getContent(),
+                ownerId, bookingRepository, commentRepository);
     }
 
     @Override
     public List<ItemDtoToClient> readByQuery(Long userId, String query, Integer from, Integer size) {
-        return query == null || query.isEmpty() ? List.of() : repository.findByQuery(query,
-                        OffsetPageRequest.ofOffset(from, size, Sort.by("id").ascending()))
-                .stream()
-                .map(item -> mapToItemDto(item, Objects.equals(item.getOwner().getId(), userId),
-                        false))
-                .collect(Collectors.toList());
+        return query == null || query.isEmpty() ? List.of() : mapper.toDtoList(repository.findByQuery(query,
+                        OffsetPageRequest.ofOffset(from, size, Sort.by("id").ascending())).getContent(),
+                userId, bookingRepository, null);
     }
 
     @Override
@@ -154,7 +124,7 @@ public class ItemServiceImpl implements ItemService {
             throw new NotFoundException("id", messageSource.get("item.ItemService.notFoundById") + ": " + id);
         }
 
-        return mapToItemDto(entity, Objects.equals(entity.getOwner().getId(), userId), true);
+        return mapper.toDto(entity, userId, bookingRepository, commentRepository);
     }
 
     @Override
@@ -171,6 +141,6 @@ public class ItemServiceImpl implements ItemService {
 
         mapper.updateEntityFromDto(dto, entity);
 
-        return mapToItemDto(repository.saveAndFlush(entity), true, false);
+        return mapper.toDto(repository.saveAndFlush(entity), ownerId, bookingRepository, null);
     }
 }

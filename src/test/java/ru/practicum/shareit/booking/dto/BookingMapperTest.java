@@ -61,7 +61,7 @@ class BookingMapperTest {
     }
 
     @Test
-    void toEntity_withNotNullFields_shouldReturnEntityWithNotNullFields() {
+    void toEntity_withNotNullFields_shouldReturnEntityWithNotNullFieldsAndNullItem() {
         BookingDtoFromClient source = createBookingDtoFromClient(10L, LocalDateTime.now(),
                 LocalDateTime.now().plusDays(1));
 
@@ -73,7 +73,7 @@ class BookingMapperTest {
                 hasProperty("end", equalTo(source.getEnd())),
                 hasProperty("status", is(nullValue())),
                 hasProperty("booker", is(nullValue())),
-                hasProperty("item", hasProperty("id", equalTo(source.getItemId())))
+                hasProperty("item", is(nullValue()))
         ));
     }
 
@@ -94,7 +94,7 @@ class BookingMapperTest {
                 hasProperty("end", is(nullValue())),
                 hasProperty("status", is(nullValue())),
                 hasProperty("booker", is(nullValue())),
-                hasProperty("item", hasProperty("id", is(nullValue())))
+                hasProperty("item", is(nullValue()))
         ));
     }
 }

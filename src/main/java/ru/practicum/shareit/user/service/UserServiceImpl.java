@@ -15,7 +15,6 @@ import ru.practicum.shareit.user.dto.UserDtoToClient;
 import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.UserRepository;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +42,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDtoToClient> readAll() {
-        return repository.findAll().stream().map(mapper::toDto)
-                .collect(Collectors.toList());
+        return mapper.toDtoList(repository.findAll());
     }
 
     @Override

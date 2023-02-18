@@ -23,7 +23,6 @@ import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -134,7 +133,7 @@ public class BookingServiceImpl implements BookingService {
             throw new NotFoundException("noBookingsFound", messageSource.get("booking.BookingService.noBookingsFound"));
         }
 
-        return entities.stream().map(mapper::toDto).collect(Collectors.toList());
+        return mapper.toDtoList(entities.getContent());
     }
 
     @Override
@@ -166,7 +165,7 @@ public class BookingServiceImpl implements BookingService {
             throw new NotFoundException("noBookingsFound", messageSource.get("booking.BookingService.noBookingsFound"));
         }
 
-        return entities.stream().map(mapper::toDto).collect(Collectors.toList());
+        return mapper.toDtoList(entities.getContent());
     }
 
     @Override

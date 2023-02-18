@@ -18,7 +18,6 @@ import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,15 +33,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     ItemRequestMapper mapper;
 
-    private ItemRequestDtoToClient mapToDto(ItemRequest entity) {
-        ItemRequestDtoToClient dto = mapper.toDto(entity);
-
-        dto.setItems(itemRepository.findByRequest_IdOrderByIdAsc(entity.getId())
-                .stream().map(mapper::toDto).collect(Collectors.toList()));
-
-        return dto;
-    }
-
     @Override
     public ItemRequestDtoToClient create(Long userId, ItemRequestDtoFromClient dto) {
         User requestor = userRepository.findById(userId).orElse(null);
@@ -56,7 +46,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         entity.setRequestor(requestor);
         entity.setCreated(LocalDateTime.now());
 
-        return mapper.toDto(repository.saveAndFlush(entity));
+        return mapper.toDto(repository.saveAndFlush(entity), null);
     }
 
     @Override
@@ -66,19 +56,14 @@ public class ItemRequestServiceImpl implements ItemRequestService {
                     messageSource.get("itemRequest.ItemRequestService.notFoundUserById") + ": " + userId);
         }
 
-        return repository.findByRequestor_IdOrderByCreatedDesc(userId)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapper.toDtoList(repository.findByRequestor_IdOrderByCreatedDesc(userId), itemRepository);
     }
 
     @Override
     public List<ItemRequestDtoToClient> readAll(Long userId, Integer from, Integer size) {
-        return repository.findByRequestor_IdNot(userId,
-                OffsetPageRequest.ofOffset(from, size, Sort.by("created").descending()))
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapper.toDtoList(repository.findByRequestor_IdNot(userId,
+                OffsetPageRequest.ofOffset(from, size, Sort.by("created").descending())).getContent(),
+                itemRepository);
    }
 
     @Override
@@ -94,6 +79,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
                     id);
         }
 
-        return mapToDto(entity);
+        return mapper.toDto(entity, itemRepository);
     }
 }

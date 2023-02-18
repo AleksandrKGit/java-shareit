@@ -18,9 +18,9 @@ class ItemRequestDtoToClientTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void toJson_withNullFields_shouldReturnJsonStringWithNullFields() throws JsonProcessingException, JSONException {
+    void toJson_withNullFields_shouldReturnJsonStringWithNullFieldsExceptItems() throws JsonProcessingException, JSONException {
         ItemRequestDtoToClient source = createItemRequestDtoToClient(null,null, null, null);
-        String expected = "{\"id\":null, \"description\":null, \"created\":null, \"items\":null}";
+        String expected = "{\"id\":null, \"description\":null, \"created\":null}";
 
         String actual = objectMapper.writeValueAsString(source);
 
