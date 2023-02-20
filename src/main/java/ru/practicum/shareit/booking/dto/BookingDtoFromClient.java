@@ -2,27 +2,22 @@ package ru.practicum.shareit.booking.dto;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import ru.practicum.shareit.booking.model.BookingStatus;
 import javax.validation.constraints.FutureOrPresent;
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@ToString
-@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BookingDtoFromClient {
-    Long id;
-
+    @NotNull(message = "{booking.BookingDto.notNullStart}")
     @FutureOrPresent(message = "{booking.BookingDto.notInPastStart}")
     LocalDateTime start;
 
+    @NotNull(message = "{booking.BookingDto.notNullEnd}")
     @FutureOrPresent(message = "{booking.BookingDto.notInPastEnd}")
     LocalDateTime end;
 
+    @NotNull(message = "{booking.BookingDto.notNullItemId}")
     Long itemId;
-
-    Long bookerId;
-
-    BookingStatus status;
 }

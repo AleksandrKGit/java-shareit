@@ -2,16 +2,16 @@ package ru.practicum.shareit.booking.service;
 
 import ru.practicum.shareit.booking.dto.BookingDtoFromClient;
 import ru.practicum.shareit.booking.dto.BookingDtoToClient;
-import java.util.Set;
+import java.util.List;
 
 public interface BookingService {
     BookingDtoToClient create(Long bookerId, BookingDtoFromClient bookingDtoFromClient);
 
-    BookingDtoToClient approve(Long id, Long bookerId, boolean approved);
+    List<BookingDtoToClient> readByBooker(Long bookerId, String state, Integer from, Integer size);
+
+    List<BookingDtoToClient> readByOwner(Long ownerId, String state, Integer from, Integer size);
 
     BookingDtoToClient readById(Long id, Long userId);
 
-    Set<BookingDtoToClient> readByBooker(Long bookerId, String state);
-
-    Set<BookingDtoToClient> readByOwner(Long ownerId, String state);
+    BookingDtoToClient approve(Long id, Long bookerId, boolean approved);
 }

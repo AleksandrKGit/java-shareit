@@ -1,11 +1,29 @@
 package ru.practicum.shareit.support;
 
-import org.springframework.dao.DataIntegrityViolationException;
-
 public class ConstraintChecker {
-    public static boolean check(DataIntegrityViolationException exception, String constraintName) {
-        return exception != null && exception.getCause() != null && exception.getCause().getCause() != null
-                && exception.getCause().getCause().getMessage() != null
-                && exception.getCause().getCause().getMessage().toLowerCase().contains(constraintName.toLowerCase());
+    private static final int numOfInnerCauses = 3;
+
+    public static boolean check(Exception exception, String constraintName) {
+        if (constraintName == null || constraintName.isEmpty() || exception == null) {
+            return false;
+        }
+
+        constraintName = constraintName.toLowerCase();
+
+        Throwable cause = exception;
+
+        for (int i = 0; i < numOfInnerCauses; i++) {
+            if (cause.getMessage() != null && cause.getMessage().toLowerCase().contains(constraintName)) {
+                return true;
+            }
+
+            cause = cause.getCause();
+
+            if (cause == null) {
+                break;
+            }
+        }
+
+        return false;
     }
 }

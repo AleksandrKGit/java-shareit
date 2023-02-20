@@ -1,16 +1,19 @@
 package ru.practicum.shareit.item.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import java.util.Set;
+import java.util.List;
 
 @Getter
 @Setter
 @ToString
-@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ItemDtoToClient {
     Long id;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long requestId;
 
     String name;
 
@@ -18,9 +21,9 @@ public class ItemDtoToClient {
 
     Boolean available;
 
-    BookingDto lastBooking;
+    BookingDtoToClient lastBooking;
 
-    BookingDto nextBooking;
+    BookingDtoToClient nextBooking;
 
-    Set<CommentDtoToClient> comments;
+    List<CommentDtoToClient> comments;
 }

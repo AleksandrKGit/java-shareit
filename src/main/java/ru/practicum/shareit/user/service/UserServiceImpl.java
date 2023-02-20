@@ -3,7 +3,6 @@ package ru.practicum.shareit.user.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.AlreadyExistException;
@@ -11,30 +10,30 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.support.ConstraintChecker;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import ru.practicum.shareit.user.User;
-import ru.practicum.shareit.user.UserDto;
-import ru.practicum.shareit.user.UserMapper;
+import ru.practicum.shareit.user.dto.UserDtoFromClient;
+import ru.practicum.shareit.user.dto.UserDtoToClient;
+import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.UserRepository;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserServiceImpl implements UserService {
-    UserRepository userRepository;
+    UserRepository repository;
 
     DefaultLocaleMessageSource messageSource;
 
+    UserMapper mapper;
+
     @Override
-    public UserDto create(UserDto userDto) {
+    public UserDtoToClient create(UserDtoFromClient dto) {
         try {
-            return UserMapper.INSTANCE.toDto(userRepository.save(UserMapper.INSTANCE.toModel(userDto)));
-        } catch (DataIntegrityViolationException exception) {
+            return mapper.toDto(repository.saveAndFlush(mapper.toEntity(dto)));
+        } catch (RuntimeException exception) {
             if (ConstraintChecker.check(exception, "uq_user_email")) {
                 throw new AlreadyExistException("email", messageSource.get("user.UserService.notUniqueEmail") + ": " +
-                        userDto.getEmail());
+                        dto.getEmail());
             } else {
                 throw exception;
             }
@@ -42,40 +41,37 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Set<UserDto> readAll() {
-        return userRepository.findAll().stream().map(UserMapper.INSTANCE::toDto)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+    public List<UserDtoToClient> readAll() {
+        return mapper.toDtoList(repository.findAll());
     }
 
     @Override
-    public UserDto readById(Long id) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isEmpty()) {
+    public UserDtoToClient readById(Long id) {
+        User entity = repository.findById(id).orElse(null);
+
+        if (entity == null) {
             throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": " + id);
         }
-        return UserMapper.INSTANCE.toDto(user.get());
+
+        return mapper.toDto(entity);
     }
 
     @Override
-    public UserDto update(Long id, UserDto userDto) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isEmpty()) {
+    public UserDtoToClient update(Long id, UserDtoFromClient dto) {
+        User entity = repository.findById(id).orElse(null);
+
+        if (entity == null) {
             throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": " + id);
         }
 
-        if (userDto.getEmail() != null) {
-            user.get().setEmail(userDto.getEmail());
-        }
-        if (userDto.getName() != null) {
-            user.get().setName(userDto.getName());
-        }
+        mapper.updateEntityFromDto(dto, entity);
 
         try {
-            return UserMapper.INSTANCE.toDto(userRepository.save(user.get()));
-        } catch (DataIntegrityViolationException exception) {
+            return mapper.toDto(repository.saveAndFlush(entity));
+        } catch (Exception exception) {
             if (ConstraintChecker.check(exception, "uq_user_email")) {
                 throw new AlreadyExistException("email", messageSource.get("user.UserService.notUniqueEmail") + ": " +
-                        userDto.getEmail());
+                        dto.getEmail());
             } else {
                 throw exception;
             }
@@ -85,7 +81,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void delete(Long id) {
         try {
-            userRepository.deleteById(id);
+            repository.deleteById(id);
         } catch (EmptyResultDataAccessException ignored) {
             throw new NotFoundException("id", messageSource.get("user.UserService.notFoundById") + ": " + id);
         }

@@ -6,24 +6,22 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.User;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "bookings")
 @Getter
 @Setter
-@ToString
-@AllArgsConstructor
-@NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(name = "start_date")
+    @Column(nullable = false, name = "start_date")
     LocalDateTime start;
 
-    @Column(name = "end_date")
+    @Column(nullable = false, name = "end_date")
     LocalDateTime end;
 
     @ManyToOne
@@ -36,4 +34,22 @@ public class Booking {
 
     @Enumerated(EnumType.STRING)
     BookingStatus status;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof Booking)) {
+            return false;
+        }
+
+        return id != null && id.equals(((Booking) obj).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
+    }
 }

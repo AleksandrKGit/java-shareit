@@ -2,19 +2,18 @@ package ru.practicum.shareit.booking.dto;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
 import ru.practicum.shareit.booking.model.Booking;
+import java.util.List;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface BookingMapper {
-    BookingMapper INSTANCE = Mappers.getMapper(BookingMapper.class);
+    List<BookingDtoToClient> toDtoList(List<Booking> entity);
 
-    @Mapping(target = "item.id", source = "item.id")
-    @Mapping(target = "item.name", source = "item.name")
-    @Mapping(target = "booker.id", source = "booker.id")
-    BookingDtoToClient toDto(Booking booking);
+    BookingDtoToClient toDto(Booking entity);
 
-    @Mapping(target = "item.id", source = "itemId")
-    @Mapping(target = "booker.id", source = "bookerId")
-    Booking toModel(BookingDtoFromClient bookingDto);
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "item", ignore = true)
+    @Mapping(target = "booker", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    Booking toEntity(BookingDtoFromClient dto);
 }

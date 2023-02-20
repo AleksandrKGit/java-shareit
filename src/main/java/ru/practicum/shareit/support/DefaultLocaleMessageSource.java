@@ -5,6 +5,6 @@ import java.util.Locale;
 
 public class DefaultLocaleMessageSource extends ReloadableResourceBundleMessageSource {
     public String get(String code) {
-        return this.getMessage(code, null, Locale.getDefault());
+        return getMessageInternal(code, null, Locale.getDefault());
     }
 }

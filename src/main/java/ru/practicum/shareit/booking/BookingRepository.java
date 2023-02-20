@@ -1,5 +1,7 @@
 package ru.practicum.shareit.booking;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -7,7 +9,6 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Set;
 
 @Repository
 public interface BookingRepository  extends JpaRepository<Booking, Long> {
@@ -17,39 +18,40 @@ public interface BookingRepository  extends JpaRepository<Booking, Long> {
                                                  LocalDateTime end);
 
     @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.start < CURRENT_TIMESTAMP " +
-            "AND b.end > CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findCurrentForBooker(Long bookerId);
+            "AND b.end > CURRENT_TIMESTAMP")
+    Page<Booking> findCurrentForBooker(Long bookerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.end < CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findPastForBooker(Long bookerId);
+    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.end < CURRENT_TIMESTAMP")
+    Page<Booking> findPastForBooker(Long bookerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.start > CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findFutureForBooker(Long bookerId);
+    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.start > CURRENT_TIMESTAMP")
+    Page<Booking> findFutureForBooker(Long bookerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.status = ?2 ORDER BY b.start DESC")
-    Set<Booking> findByStatusForBooker(Long bookerId, BookingStatus status);
+    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 AND b.status = ?2")
+    Page<Booking> findByStatusForBooker(Long bookerId, BookingStatus status, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1 ORDER BY b.start DESC")
-    Set<Booking> findAllForBooker(Long bookerId);
+    @Query("SELECT b FROM Booking b WHERE b.booker.id = ?1")
+    Page<Booking> findAllForBooker(Long bookerId, Pageable pageable);
 
     @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.start < CURRENT_TIMESTAMP " +
-            "AND b.end > CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findCurrentForOwner(Long ownerId);
+            "AND b.end > CURRENT_TIMESTAMP")
+    Page<Booking> findCurrentForOwner(Long ownerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.end < CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findPastForOwner(Long ownerId);
+    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.end < CURRENT_TIMESTAMP")
+    Page<Booking> findPastForOwner(Long ownerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.start > CURRENT_TIMESTAMP ORDER BY b.start DESC")
-    Set<Booking> findFutureForOwner(Long ownerId);
+    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.start > CURRENT_TIMESTAMP")
+    Page<Booking> findFutureForOwner(Long ownerId, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.status = ?2 ORDER BY b.start DESC")
-    Set<Booking> findByStatusForOwner(Long ownerId, BookingStatus status);
+    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 AND b.status = ?2")
+    Page<Booking> findByStatusForOwner(Long ownerId, BookingStatus status, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1 ORDER BY b.start DESC")
-    Set<Booking> findAllForOwner(Long ownerId);
+    @Query("SELECT b FROM Booking b WHERE b.item.owner.id = ?1")
+    Page<Booking> findAllForOwner(Long ownerId, Pageable pageable);
 
     // Пример использования запросных методов
     // Получение последнего бронирования вещи
+
     Optional<Booking> findFirst1ByItem_IdAndEndLessThanOrderByEndDesc(Long itemId, LocalDateTime end);
 
     // Получение ближайшего следующего бронирования вещи
