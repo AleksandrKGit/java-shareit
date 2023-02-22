@@ -21,8 +21,6 @@ services:
     depends_on:
       - db
     environment:
-      # Timezone for Postman tests
-      - TZ=Asia/Vladivostok
       - SHAREIT_SERVER_PORT=9090
       - DB_NAME=shareit
       - POSTGRES_USER=root
