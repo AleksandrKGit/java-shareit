@@ -26,7 +26,7 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.support.OffsetPageRequest;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.tools.configuration.AppTestConfiguration;
@@ -109,13 +109,13 @@ class BookingServiceTest {
     }
 
     @Test
-    void create_withPeriodWithReservedBookings_shouldThrowValidationException() {
+    void create_withPeriodWithReservedBookings_shouldThrowBadRequestException() {
         when(repository.getApprovedBookingsCountInPeriodForItem(requestBookingDto.getItemId(),
                 BookingStatus.APPROVED, requestBookingDto.getStart(), requestBookingDto.getEnd())).thenReturn(1L);
         when(itemRepository.findById(requestBookingDto.getItemId())).thenReturn(Optional.of(copyOf(item)));
         when(userRepository.findById(userId)).thenReturn(Optional.of(copyOf(user)));
 
-        assertThrows(ValidationException.class, () -> service.create(userId, requestBookingDto));
+        assertThrows(BadRequestException.class, () -> service.create(userId, requestBookingDto));
         verify(repository, never()).saveAndFlush(any());
     }
 
@@ -143,14 +143,14 @@ class BookingServiceTest {
     }
 
     @Test
-    void create_withNotAvailableItem_shouldThrowValidationException() {
+    void create_withNotAvailableItem_shouldThrowBadRequestException() {
         item.setAvailable(false);
         when(repository.getApprovedBookingsCountInPeriodForItem(requestBookingDto.getItemId(),
                 BookingStatus.APPROVED, requestBookingDto.getStart(), requestBookingDto.getEnd())).thenReturn(0L);
         when(itemRepository.findById(requestBookingDto.getItemId())).thenReturn(Optional.of(copyOf(item)));
         when(userRepository.findById(userId)).thenReturn(Optional.of(copyOf(user)));
 
-        assertThrows(ValidationException.class, () -> service.create(userId, requestBookingDto));
+        assertThrows(BadRequestException.class, () -> service.create(userId, requestBookingDto));
         verify(repository, never()).saveAndFlush(any());
     }
 
@@ -479,48 +479,48 @@ class BookingServiceTest {
 
     @ParameterizedTest
     @MethodSource("approveNotWaitingStatus")
-    void approve_withNotWaiting_shouldThrowValidationException(boolean approved, BookingStatus status) {
+    void approve_withNotWaiting_shouldThrowBadRequestException(boolean approved, BookingStatus status) {
         existingBooking.setStatus(status);
         when(repository.getApprovedBookingsCountInPeriodForItem(existingBooking.getItem().getId(),
                 BookingStatus.APPROVED, existingBooking.getStart(), existingBooking.getEnd())).thenReturn(0L);
         when(repository.findById(id)).thenReturn(Optional.of(copyOf(existingBooking)));
 
-        assertThrows(ValidationException.class, () -> service.approve(id, ownerId, approved));
+        assertThrows(BadRequestException.class, () -> service.approve(id, ownerId, approved));
         verify(repository, never()).saveAndFlush(any());
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void approve_withNotAvailableItem_shouldValidationException(boolean approved) {
+    void approve_withNotAvailableItem_shouldBadRequestException(boolean approved) {
         existingBooking.getItem().setAvailable(false);
         when(repository.getApprovedBookingsCountInPeriodForItem(existingBooking.getItem().getId(),
                 BookingStatus.APPROVED, existingBooking.getStart(), existingBooking.getEnd())).thenReturn(0L);
         when(repository.findById(id)).thenReturn(Optional.of(copyOf(existingBooking)));
 
-        assertThrows(ValidationException.class, () -> service.approve(id, ownerId, approved));
+        assertThrows(BadRequestException.class, () -> service.approve(id, ownerId, approved));
         verify(repository, never()).saveAndFlush(any());
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void approve_withPastEndDate_shouldValidationException(boolean approved) {
+    void approve_withPastEndDate_shouldBadRequestException(boolean approved) {
         existingBooking.setStart(LocalDateTime.now().minusDays(1));
         existingBooking.setEnd(LocalDateTime.now());
         when(repository.getApprovedBookingsCountInPeriodForItem(existingBooking.getItem().getId(),
                 BookingStatus.APPROVED, existingBooking.getStart(), existingBooking.getEnd())).thenReturn(0L);
         when(repository.findById(id)).thenReturn(Optional.of(copyOf(existingBooking)));
 
-        assertThrows(ValidationException.class, () -> service.approve(id, ownerId, approved));
+        assertThrows(BadRequestException.class, () -> service.approve(id, ownerId, approved));
         verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
-    void approve_withApprovedInReservedTime_shouldValidationException() {
+    void approve_withApprovedInReservedTime_shouldBadRequestException() {
         when(repository.getApprovedBookingsCountInPeriodForItem(existingBooking.getItem().getId(),
                 BookingStatus.APPROVED, existingBooking.getStart(), existingBooking.getEnd())).thenReturn(1L);
         when(repository.findById(id)).thenReturn(Optional.of(copyOf(existingBooking)));
 
-        assertThrows(ValidationException.class, () -> service.approve(id, ownerId, true));
+        assertThrows(BadRequestException.class, () -> service.approve(id, ownerId, true));
         verify(repository, never()).saveAndFlush(any());
     }
 

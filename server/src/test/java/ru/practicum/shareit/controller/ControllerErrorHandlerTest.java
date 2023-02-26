@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import ru.practicum.shareit.exception.AccessDeniedException;
 import ru.practicum.shareit.exception.AlreadyExistException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -26,10 +26,10 @@ class ControllerErrorHandlerTest {
     }
 
     @Test
-    void handleValidationException_shouldReturnMapOfErrorsWithOneElement() {
-        ValidationException exception = new ValidationException("field", "error");
+    void handleBadRequestException_shouldReturnMapOfErrorsWithOneElement() {
+        BadRequestException exception = new BadRequestException("field", "error");
 
-        Map<String, String> target = controllerErrorHandler.handleValidationException(exception);
+        Map<String, String> target = controllerErrorHandler.handleBadRequestException(exception);
 
         assertThat(target, aMapWithSize(1));
     }

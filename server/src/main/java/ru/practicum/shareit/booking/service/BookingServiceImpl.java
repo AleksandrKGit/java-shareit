@@ -16,7 +16,7 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.support.OffsetPageRequest;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
@@ -39,24 +39,24 @@ public class BookingServiceImpl implements BookingService {
 
     BookingMapper mapper;
 
-    private void validateCreatingBooking(BookingDtoFromClient bookingDtoFromClient) {
+    private void checkCreatingBooking(BookingDtoFromClient bookingDtoFromClient) {
         if (repository.getApprovedBookingsCountInPeriodForItem(bookingDtoFromClient.getItemId(),
                 BookingStatus.APPROVED, bookingDtoFromClient.getStart(), bookingDtoFromClient.getEnd()) > 0) {
-            throw new ValidationException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
+            throw new BadRequestException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
                     + bookingDtoFromClient.getItemId() + " " + bookingDtoFromClient.getStart() + " "
                     + bookingDtoFromClient.getEnd());
         }
     }
 
-    private void validateCreatingBookingItem(Item item) {
+    private void checkCreatingBookingItem(Item item) {
         if (!item.getAvailable()) {
-            throw new ValidationException("itemId", messageSource.get("booking.BookingService.itemNotAvailable"));
+            throw new BadRequestException("itemId", messageSource.get("booking.BookingService.itemNotAvailable"));
         }
     }
 
     @Override
     public BookingDtoToClient create(Long bookerId, BookingDtoFromClient bookingDtoFromClient) {
-        validateCreatingBooking(bookingDtoFromClient);
+        checkCreatingBooking(bookingDtoFromClient);
 
         Item item = itemRepository.findById(bookingDtoFromClient.getItemId()).orElse(null);
 
@@ -69,7 +69,7 @@ public class BookingServiceImpl implements BookingService {
             throw new NotFoundException("itemId", item.getId() + " for user with id " + bookerId);
         }
 
-        validateCreatingBookingItem(item);
+        checkCreatingBookingItem(item);
 
         User booker = userRepository.findById(bookerId).orElse(null);
 
@@ -166,24 +166,24 @@ public class BookingServiceImpl implements BookingService {
         return mapper.toDto(entity);
     }
 
-    private void validateApprovingBooking(Booking booking, boolean approved) {
+    private void checkApprovingBooking(Booking booking, boolean approved) {
         if (!booking.getStatus().equals(BookingStatus.WAITING)) {
-            throw new ValidationException("status", messageSource.get("booking.BookingService.statusIsWaiting")
+            throw new BadRequestException("status", messageSource.get("booking.BookingService.statusIsWaiting")
                     + ": " + booking.getStatus());
         }
 
         if (!booking.getItem().getAvailable()) {
-            throw new ValidationException("item", messageSource.get("booking.BookingService.itemNotAvailable")
+            throw new BadRequestException("item", messageSource.get("booking.BookingService.itemNotAvailable")
                     + ": " + booking.getItem().getId());
         }
 
         if (!booking.getEnd().isAfter(LocalDateTime.now())) {
-            throw new ValidationException("id", messageSource.get("booking.BookingService.endInFuture"));
+            throw new BadRequestException("id", messageSource.get("booking.BookingService.endInFuture"));
         }
 
         if (approved && (repository.getApprovedBookingsCountInPeriodForItem(booking.getItem().getId(),
                 BookingStatus.APPROVED, booking.getStart(), booking.getEnd()) > 0)) {
-            throw new ValidationException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
+            throw new BadRequestException("item", messageSource.get("booking.BookingService.itemIsReserved") + ": "
                     + booking.getItem().getId() + " " + booking.getStart() + " " + booking.getEnd());
         }
     }
@@ -200,7 +200,7 @@ public class BookingServiceImpl implements BookingService {
             throw new NotFoundException("itemId", entity.getItem().getId() + " for user with id " + ownerId);
         }
 
-        validateApprovingBooking(entity, approved);
+        checkApprovingBooking(entity, approved);
 
         entity.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 

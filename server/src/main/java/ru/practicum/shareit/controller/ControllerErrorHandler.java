@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import ru.practicum.shareit.exception.AccessDeniedException;
 import ru.practicum.shareit.exception.AlreadyExistException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.support.DefaultLocaleMessageSource;
 import java.util.*;
 
@@ -31,7 +31,7 @@ public class ControllerErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public Map<String, String> handleValidationException(ValidationException ex) {
+    public Map<String, String> handleBadRequestException(BadRequestException ex) {
         log.warn(messageSource.get("controller.validationError") + ": " + ex.getErrors());
         return ex.getErrors();
     }

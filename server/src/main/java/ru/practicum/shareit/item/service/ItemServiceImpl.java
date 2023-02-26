@@ -10,7 +10,7 @@ import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.support.OffsetPageRequest;
 import ru.practicum.shareit.exception.AccessDeniedException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.item.dto.*;
@@ -73,16 +73,16 @@ public class ItemServiceImpl implements ItemService {
         return mapper.toDto(entity, ownerId, null, null);
     }
 
-    private void validateItemWasBooked(Long authorId, Long itemId) {
+    private void checkItemWasBooked(Long authorId, Long itemId) {
         if (bookingRepository.getItemBookingsCountForBooker(itemId, authorId, BookingStatus.APPROVED) == 0) {
-            throw new ValidationException("comment", messageSource.get("item.ItemService.notBooked") + ": itemId "
+            throw new BadRequestException("comment", messageSource.get("item.ItemService.notBooked") + ": itemId "
                     + itemId + ", authorId " + authorId);
         }
     }
 
     @Override
     public CommentDtoToClient createComment(Long authorId, Long itemId, CommentDtoFromClient commentDtoFromClient) {
-        validateItemWasBooked(authorId, itemId);
+        checkItemWasBooked(authorId, itemId);
 
         User author = userRepository.findById(authorId).orElse(null);
 

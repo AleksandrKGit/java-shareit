@@ -17,7 +17,7 @@ import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.support.OffsetPageRequest;
 import ru.practicum.shareit.exception.AccessDeniedException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
@@ -212,11 +212,11 @@ class ItemServiceTest {
     }
 
     @Test
-    void createComment_withNotBookedItem_shouldThrowValidationException() {
+    void createComment_withNotBookedItem_shouldThrowBadRequestException() {
         when(bookingRepository.getItemBookingsCountForBooker(id, userId, BookingStatus.APPROVED)).thenReturn(0L);
         when(userRepository.findById(userId)).thenReturn(Optional.of(UserFactory.copyOf(user)));
 
-        assertThrows(ValidationException.class, () -> service.createComment(userId, id, requestCommentDto));
+        assertThrows(BadRequestException.class, () -> service.createComment(userId, id, requestCommentDto));
         verify(commentRepository, never()).saveAndFlush(any());
     }
 
